@@ -45,6 +45,7 @@ fn main() {
     }
 }
 
+// Trouve tout les atomes de l'expression
 fn find_atoms(ast: &parser::AstNode, atoms: &mut HashMap<String, ()>) {
     match ast {
         parser::AstNode::Atom(atom) => {
@@ -63,29 +64,37 @@ fn find_atoms(ast: &parser::AstNode, atoms: &mut HashMap<String, ()>) {
     }
 }
 
-
+// Genere les valeurs de verites pour chaque combinaison
 fn generate_truth_values(truth_values: &mut Vec<HashMap<String, bool>>, atoms: &HashMap<String, ()>) {
-    let mut index = 0;
-    let atom_names: Vec<String> = atoms.keys().cloned().collect();
+    let mut index = 0; // Initialise un index de position dans le vecteur de valeurs de vérité.
+    let atom_names: Vec<String> = atoms.keys().cloned().collect(); // Récupère les noms des atomes
+
+    // Parcourt toutes les combinaisons possibles de valeurs de vérité pour les atomes.
     for combination in 0..(1 << atoms.len()) {
+        // Pour chaque combinaison de valeurs de vérité, on stock les valeurs de vérité de chaque atome.
         for (i, atom_name) in atom_names.iter().enumerate() {
-            truth_values[combination].insert(atom_name.clone(), (combination & (1 << i)) != 0);
+            // Calcul de la valeur de vérité de l'atome dans cette combinaison.
+            let truth_value = (combination & (1 << i)) != 0;
+            // Insère la valeur de vérité de l'atome dans la combinaison.
+            truth_values[index].insert(atom_name.clone(), truth_value);
         }
+        index += 1; // Passe à la prochaine combinaison de valeurs de vérité.
     }
 }
 
+// Evalue si une expression est satisfaisable selon les valeurs de verite des atomes
 fn evaluate(ast: &parser::AstNode, truth_assignment: &HashMap<String, bool>) -> bool {
     match ast {
         parser::AstNode::Atom(atom) => *truth_assignment.get(atom).unwrap_or(&false),
-        parser::AstNode::Not(sub_ast) => !evaluate(sub_ast, truth_assignment),
+        parser::AstNode::Not(sub_ast) => !evaluate(sub_ast, truth_assignment), 
         parser::AstNode::And(left, right) => {
             evaluate(left, truth_assignment) && evaluate(right, truth_assignment)
         }
         parser::AstNode::Or(left, right) => {
-            evaluate(left, truth_assignment) || evaluate(right, truth_assignment)
+            evaluate(left, truth_assignment) || evaluate(right, truth_assignment) 
         }
         parser::AstNode::If(left, right) => {
-            !evaluate(left, truth_assignment) || evaluate(right, truth_assignment)
+            !evaluate(left, truth_assignment) || evaluate(right, truth_assignment) 
         }
         parser::AstNode::Iff(left, right) => {
             let left_result = evaluate(left, truth_assignment);
@@ -94,4 +103,5 @@ fn evaluate(ast: &parser::AstNode, truth_assignment: &HashMap<String, bool>) -> 
         }
     }
 }
+
 
