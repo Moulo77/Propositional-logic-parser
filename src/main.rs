@@ -5,43 +5,48 @@ mod parser;
 
 fn main() {
     let mut input = String::new();
-    println!("Please enter a logical formula:");
+    println!("Please enter the knowledge base (formulas separated by a comma):");
     io::stdin().read_line(&mut input).unwrap();
-    let tokens = parser::lex(input.trim());
-    println!("Tokens: {:?}", tokens);
+    let formulas: Vec<&str> = input.trim().split(',').collect();
     
+    let mut knowledge_base = Vec::new();
+    for formula in formulas {
+        let tokens = parser::lex(formula.trim());
+        let mut parser = parser::Parser::new(tokens);
+        let ast = parser.parse().expect("Syntax error");
+        knowledge_base.push(ast);
+    }
+
+    println!("Please enter the formula to check:");
+    let mut alpha = String::new();
+    io::stdin().read_line(&mut alpha).unwrap();
+    let tokens = parser::lex(alpha.trim());
     let mut parser = parser::Parser::new(tokens);
-    let ast = parser.parse().expect("Syntax error");
-    
-    // Trouver les atomes propositionnels dans la formule
+    let alpha_ast = parser.parse().expect("Syntax error");
+
     let mut atoms = HashMap::new();
-    find_atoms(&ast, &mut atoms);
-    println!("{:?}", ast);
-    println!("{:?}",atoms);
-    
-    // Générer toutes les combinaisons possibles de valeurs de vérité pour les atomes
+    for ast in &knowledge_base {
+        find_atoms(ast, &mut atoms);
+    }
+    find_atoms(&alpha_ast, &mut atoms);
+
     let mut truth_values = vec![HashMap::new(); 1 << atoms.len()];
     generate_truth_values(&mut truth_values, &atoms);
-    
-    // Vérifier la satisfaisabilité de la formule pour chaque combinaison de valeurs de vérité
-    let mut satisfiable_assignments = vec![];
-    let mut unsatisfiable_assignments = vec![];
+
+    let mut valid = true;
     for truth_assignment in &truth_values {
-        if evaluate(&ast, truth_assignment) {
-            satisfiable_assignments.push(truth_assignment.clone());
-        } else {
-            unsatisfiable_assignments.push(truth_assignment.clone());
+        if knowledge_base.iter().all(|ast| evaluate(ast, truth_assignment)) {
+            if !evaluate(&alpha_ast, truth_assignment) {
+                valid = false;
+                break;
+            }
         }
     }
-    
-    println!("Satisfiable assignments:");
-    for assignment in &satisfiable_assignments {
-        println!("{:?}", assignment);
-    }
-    
-    println!("Unsatisfiable assignments:");
-    for assignment in &unsatisfiable_assignments {
-        println!("{:?}", assignment);
+
+    if valid {
+        println!("The formula is a logical consequence of the knowledge base (KB |= α).");
+    } else {
+        println!("The formula is NOT a logical consequence of the knowledge base (KB |≠ α).");
     }
 }
 
